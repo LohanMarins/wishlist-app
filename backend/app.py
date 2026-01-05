@@ -56,5 +56,9 @@ def deliver_item(item_id):
     query_db('UPDATE items SET delivered=1 WHERE id=?', (item_id,))
     return jsonify({'status': 'ok'})
 
+import os
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render provides this env var
+    app.run(host="0.0.0.0", port=port, debug=False)
+
