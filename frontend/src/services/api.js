@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000";
+const API_URL = "https://wishlist-backend-1x5u.onrender.com";
 
 export async function getItems(owner) {
     const res = await fetch(`${API_URL}/items?owner=${owner}`);
