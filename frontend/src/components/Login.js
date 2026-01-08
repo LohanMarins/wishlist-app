@@ -8,8 +8,13 @@ export default function Login({ onLogin }) {
   const submit = async (e) => {
     e.preventDefault();
     const res = await login(username, password);
-    if (res.user) onLogin(res.user);
-    else alert("Login inválido");
+
+    if (res.token) {
+      localStorage.setItem("token", res.token);
+      onLogin(res.token);
+    } else {
+      alert("Login inválido");
+    }
   };
 
   return (
