@@ -62,7 +62,7 @@ export default function ItemList({ items, user, refresh, onEdit, onDelete }) {
             )}
 
             {/* editar/remover só quem criou */}
-            {i.owner === user && (
+            {i.created_by === user && (
               <>
                 <button
                   className="secondary small"
