@@ -1,36 +1,38 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import Login from "./components/Login";
 import AddItemForm from "./components/AddItemForm";
 import ItemList from "./components/ItemList";
-import { getItems } from "./services/api";
-import "./App.css";
+import { getMe, getItems } from "./services/api";
 
 export default function App() {
-  const [owner, setOwner] = useState("Lohan");
+  const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
 
-  const refreshItems = async () => {
-    const data = await getItems(owner);
+  const refresh = async () => {
+    const data = await getItems();
     setItems(data);
   };
 
   useEffect(() => {
-    refreshItems();
-  }, [owner]);
+    getMe().then(res => {
+      if (res.user) {
+        setUser(res.user);
+        refresh();
+      }
+    });
+  }, []);
+
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
 
   return (
-    <div className="container">
-      <h1>🎁 Lista de Desejos</h1>
+    <div>
+      <h1>Lista de Desejos</h1>
+      <p>Logado como: {user}</p>
 
-      <div className="user-select">
-        <label style={{ marginRight: 10 }}>Usuário:</label>
-        <select value={owner} onChange={(e) => setOwner(e.target.value)}>
-          <option>Lohan</option>
-          <option>Letícia</option>
-        </select>
-      </div>
-
-      <AddItemForm owner={owner} refreshItems={refreshItems} />
-      <ItemList items={items} owner={owner} refreshItems={refreshItems} />
+      <AddItemForm refresh={refresh} />
+      <ItemList items={items} refresh={refresh} />
     </div>
   );
 }
