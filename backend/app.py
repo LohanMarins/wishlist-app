@@ -1,11 +1,10 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
 import json, os
 
 app = Flask(__name__)
-app.secret_key = "super-secret-key"
-CORS(app, supports_credentials=True)
+CORS(app)
 
 DATA_FILE = "data.json"
 
@@ -14,6 +13,7 @@ USERS = {
     "leticia": "1234"
 }
 
+# ---------- helpers ----------
 def read_data():
     if not os.path.exists(DATA_FILE):
         return []
@@ -24,32 +24,28 @@ def write_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-# ---------- LOGIN ----------
+def get_user_from_token():
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return auth.replace("Bearer ", "")
+    return None
+
+# ---------- login ----------
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
-    username = data["username"].lower()
-    password = data["password"]
+    username = data.get("username", "").lower()
+    password = data.get("password", "")
 
     if USERS.get(username) == password:
-        session["user"] = username
-        return jsonify({"user": username})
+        return jsonify({"token": username})
 
     return jsonify({"error": "Invalid credentials"}), 401
 
-@app.route("/me")
-def me():
-    return jsonify({"user": session.get("user")})
-
-@app.route("/logout", methods=["POST"])
-def logout():
-    session.clear()
-    return jsonify({"ok": True})
-
-# ---------- ITEMS ----------
+# ---------- items ----------
 @app.route("/items", methods=["GET"])
 def get_items():
-    viewer = session.get("user")
+    viewer = get_user_from_token()
     if not viewer:
         return jsonify([]), 401
 
@@ -88,7 +84,7 @@ def get_items():
 
 @app.route("/items", methods=["POST"])
 def add_item():
-    viewer = session.get("user")
+    viewer = get_user_from_token()
     if not viewer:
         return jsonify({"error": "unauthorized"}), 401
 
@@ -108,7 +104,7 @@ def add_item():
 
 @app.route("/items/<int:item_id>/buy", methods=["POST"])
 def buy_item(item_id):
-    viewer = session.get("user")
+    viewer = get_user_from_token()
     items = read_data()
 
     for item in items:
