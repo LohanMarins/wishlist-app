@@ -1,115 +1,80 @@
 body {
   margin: 0;
-  background-color: #f8fafc;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #333;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f4f6f8;
 }
 
-.container {
-  max-width: 800px;
-  margin: 50px auto;
-  background: #fff;
-  border-radius: 15px;
-  padding: 30px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+.app {
+  max-width: 900px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
-h1 {
-  text-align: center;
-  color: #4f46e5;
-  margin-bottom: 20px;
+h1, h2, h3 {
+  margin-top: 0;
 }
 
-.user-select {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 25px;
-}
-
-select {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 14px;
-  color: white;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-button.add {
-  background-color: #4f46e5;
-}
-button.add:hover {
-  background-color: #4338ca;
-}
-
-button.buy {
-  background-color: #16a34a;
-}
-button.buy:hover {
-  background-color: #15803d;
-}
-
-button.deliver {
-  background-color: #f59e0b;
-}
-button.deliver:hover {
-  background-color: #d97706;
-}
-
-.item-card {
-  background-color: #f9fafb;
-  border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 12px;
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.item-info {
-  flex: 1;
+button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
 }
 
-.link {
-  margin-left: 10px;
-  color: #4f46e5;
-  text-decoration: none;
-}
-.link:hover {
-  text-decoration: underline;
+button.secondary {
+  background: #64748b;
 }
 
-.category {
-  padding: 4px 10px;
-  border-radius: 20px;
+button.danger {
+  background: #dc2626;
+}
+
+button.small {
   font-size: 0.8rem;
-  font-weight: bold;
-  margin-right: 8px;
+  padding: 4px 8px;
 }
 
-.category.Casa {
-  background-color: #bfdbfe;
-  color: #1e3a8a;
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fafafa;
 }
 
-.category.Nina {
-  background-color: #fbcfe8;
-  color: #9d174d;
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  margin-left: 6px;
+  background: #e5e7eb;
 }
 
-.category.Lohan {
-  background-color: #bbf7d0;
-  color: #166534;
+.badge.lohan { background: #bbf7d0; }
+.badge.leticia { background: #ddd6fe; }
+.badge.nina { background: #fbcfe8; }
+.badge.casa { background: #bfdbfe; }
+
+.controls {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
 }
 
-.category.Letícia {
-  background-color: #e9d5ff;
-  color: #6b21a8;
+input, select, textarea {
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
 }

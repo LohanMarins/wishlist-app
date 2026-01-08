@@ -46,3 +46,21 @@ export async function deliverItem(id) {
     headers: authHeader(),
   });
 }
+
+export async function updateItem(id, data) {
+  return fetch(`${API}/items/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(),
+    },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteItem(id) {
+  return fetch(`${API}/items/${id}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+}
