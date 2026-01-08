@@ -98,16 +98,17 @@ def add_item():
         return jsonify({"error": "cannot add item for another user"}), 403
 
     item = {
-        "id": len(items) + 1,
-        "item": data.get("item"),
-        "owner": owner,
-        "category": data.get("category"),
-        "link": data.get("link"),
-        "note": data.get("note"),
-        "created_at": datetime.utcnow().isoformat(),
-        "bought_by": None,
-        "bought_at": None,
-        "delivered": False
+    "id": len(items) + 1,
+    "item": data.get("item"),
+    "owner": owner,
+    "category": owner,
+    "link": data.get("link"),
+    "note": data.get("note"),
+    "created_by": viewer,  # 👈 AQUI
+    "created_at": datetime.utcnow().isoformat(),
+    "bought_by": None,
+    "bought_at": None,
+    "delivered": False
     }
 
     items.append(item)
@@ -142,7 +143,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
 
-    
+
 @app.route("/items/<int:item_id>", methods=["PUT"])
 def update_item(item_id):
     viewer = get_user_from_token()
@@ -150,7 +151,7 @@ def update_item(item_id):
 
     for item in items:
         if item["id"] == item_id:
-            if item["owner"] != viewer:
+            if item["created_by"] != viewer:
                 return jsonify({"error": "forbidden"}), 403
 
             data = request.json
@@ -166,12 +167,19 @@ def update_item(item_id):
 @app.route("/items/<int:item_id>", methods=["DELETE"])
 def delete_item(item_id):
     viewer = get_user_from_token()
+    if not viewer:
+        return jsonify({"error": "unauthorized"}), 401
+
     items = read_data()
 
-    new_items = [i for i in items if not (i["id"] == item_id and i["owner"] == viewer)]
+    for item in items:
+        if item["id"] == item_id:
+            if item["created_by"] != viewer:
+                return jsonify({"error": "forbidden"}), 403
+            break
+    else:
+        return jsonify({"error": "not found"}), 404
 
-    if len(new_items) == len(items):
-        return jsonify({"error": "forbidden"}), 403
-
-    write_data(new_items)
+    items = [i for i in items if i["id"] != item_id]
+    write_data(items)
     return jsonify({"ok": True})
