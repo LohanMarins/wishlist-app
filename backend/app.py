@@ -1,28 +1,52 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
-import json, os
+import sqlite3
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-DATA_FILE = "data.json"
+DB_PATH = "wishlist.db"
 
 USERS = {
     "lohan": "1234",
     "leticia": "1234"
 }
 
-# ---------- helpers ----------
-def read_data():
-    if not os.path.exists(DATA_FILE):
-        return []
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+# ---------- DATABASE ----------
 
-def write_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item TEXT NOT NULL,
+            owner TEXT NOT NULL,
+            category TEXT NOT NULL,
+            link TEXT,
+            note TEXT,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            bought_by TEXT,
+            bought_at TEXT,
+            delivered INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# ---------- AUTH ----------
 
 def get_user_from_token():
     auth = request.headers.get("Authorization", "")
@@ -30,26 +54,32 @@ def get_user_from_token():
         return auth.replace("Bearer ", "")
     return None
 
-# ---------- login ----------
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.json
-    username = data.get("username", "").lower()
-    password = data.get("password", "")
+    data = request.json or {}
+    username = data.get("username", "").strip().lower()
+    password = data.get("password", "").strip()
 
     if USERS.get(username) == password:
         return jsonify({"token": username})
 
-    return jsonify({"error": "Invalid credentials"}), 401
+    return jsonify({"error": "invalid credentials"}), 401
 
-# ---------- items ----------
+# ---------- ITEMS ----------
+
 @app.route("/items", methods=["GET"])
 def get_items():
     viewer = get_user_from_token()
     if not viewer:
         return jsonify([]), 401
 
-    items = read_data()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM items")
+    rows = cur.fetchall()
+    conn.close()
+
+    items = [dict(r) for r in rows]
 
     pending = [
         i for i in items
@@ -58,14 +88,12 @@ def get_items():
 
     hide_before = None
     if pending:
-        hide_before = max(
-            datetime.fromisoformat(i["bought_at"]) for i in pending
-        )
+        hide_before = max(datetime.fromisoformat(i["bought_at"]) for i in pending)
 
     visible = []
 
     for item in items:
-        if item["category"] in ["Casa", "Nina"]:
+        if item["owner"] in ["casa", "nina"]:
             visible.append(item)
             continue
 
@@ -88,98 +116,111 @@ def add_item():
     if not viewer:
         return jsonify({"error": "unauthorized"}), 401
 
-    items = read_data()
-    data = request.json
-
+    data = request.json or {}
     owner = data.get("owner")
 
-    # regra: não pode adicionar item para o outro usuário
     if owner in ["lohan", "leticia"] and owner != viewer:
         return jsonify({"error": "cannot add item for another user"}), 403
 
-    item = {
-    "id": len(items) + 1,
-    "item": data.get("item"),
-    "owner": owner,
-    "category": owner,
-    "link": data.get("link"),
-    "note": data.get("note"),
-    "created_by": viewer,  # 👈 AQUI
-    "created_at": datetime.utcnow().isoformat(),
-    "bought_by": None,
-    "bought_at": None,
-    "delivered": False
-    }
+    conn = get_db()
+    cur = conn.cursor()
 
-    items.append(item)
-    write_data(items)
-    return jsonify(item)
+    cur.execute("""
+        INSERT INTO items (
+            item, owner, category, link, note,
+            created_by, created_at, delivered
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    """, (
+        data.get("item"),
+        owner,
+        owner,
+        data.get("link"),
+        data.get("note"),
+        viewer,
+        datetime.utcnow().isoformat()
+    ))
+
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
 
 @app.route("/items/<int:item_id>/buy", methods=["POST"])
 def buy_item(item_id):
     viewer = get_user_from_token()
-    items = read_data()
 
-    for item in items:
-        if item["id"] == item_id:
-            item["bought_by"] = viewer
-            item["bought_at"] = datetime.utcnow().isoformat()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE items
+        SET bought_by = ?, bought_at = ?
+        WHERE id = ?
+    """, (viewer, datetime.utcnow().isoformat(), item_id))
 
-    write_data(items)
+    conn.commit()
+    conn.close()
     return jsonify({"ok": True})
 
 @app.route("/items/<int:item_id>/deliver", methods=["POST"])
 def deliver_item(item_id):
-    items = read_data()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE items SET delivered = 1 WHERE id = ?
+    """, (item_id,))
 
-    for item in items:
-        if item["id"] == item_id:
-            item["delivered"] = True
-
-    write_data(items)
+    conn.commit()
+    conn.close()
     return jsonify({"ok": True})
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
 
 @app.route("/items/<int:item_id>", methods=["PUT"])
 def update_item(item_id):
     viewer = get_user_from_token()
-    items = read_data()
+    data = request.json or {}
 
-    for item in items:
-        if item["id"] == item_id:
-            if item["created_by"] != viewer:
-                return jsonify({"error": "forbidden"}), 403
+    conn = get_db()
+    cur = conn.cursor()
 
-            data = request.json
-            item["item"] = data.get("item", item["item"])
-            item["link"] = data.get("link", item["link"])
-            item["note"] = data.get("note", item["note"])
-            write_data(items)
-            return jsonify(item)
+    cur.execute("SELECT created_by FROM items WHERE id = ?", (item_id,))
+    row = cur.fetchone()
 
-    return jsonify({"error": "not found"}), 404
+    if not row or row["created_by"] != viewer:
+        return jsonify({"error": "forbidden"}), 403
 
+    cur.execute("""
+        UPDATE items
+        SET item = ?, link = ?, note = ?
+        WHERE id = ?
+    """, (
+        data.get("item"),
+        data.get("link"),
+        data.get("note"),
+        item_id
+    ))
+
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
 
 @app.route("/items/<int:item_id>", methods=["DELETE"])
 def delete_item(item_id):
     viewer = get_user_from_token()
-    if not viewer:
-        return jsonify({"error": "unauthorized"}), 401
 
-    items = read_data()
+    conn = get_db()
+    cur = conn.cursor()
 
-    for item in items:
-        if item["id"] == item_id:
-            if item["created_by"] != viewer:
-                return jsonify({"error": "forbidden"}), 403
-            break
-    else:
-        return jsonify({"error": "not found"}), 404
+    cur.execute("SELECT created_by FROM items WHERE id = ?", (item_id,))
+    row = cur.fetchone()
 
-    items = [i for i in items if i["id"] != item_id]
-    write_data(items)
+    if not row or row["created_by"] != viewer:
+        return jsonify({"error": "forbidden"}), 403
+
+    cur.execute("DELETE FROM items WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
     return jsonify({"ok": True})
+
+# ---------- START ----------
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
