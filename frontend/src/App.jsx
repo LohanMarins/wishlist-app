@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import Login from "./components/Login";
 import AddItemForm from "./components/AddItemForm";
 import ItemList from "./components/ItemList";
+import Filters from "./components/Filters";
 import { getItems, updateItem } from "./services/api";
 import "./App.css";
 
@@ -10,12 +11,33 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [order, setOrder] = useState("date_desc");
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem("theme") === "dark"
   );
 
   const refresh = async () => {
-    const data = await getItems();
+    let data = await getItems();
+
+    if (filter !== "all") {
+      data = data.filter((i) => i.destinatario === filter);
+    }
+
+    if (order === "date_desc") {
+      data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    if (order === "date_asc") {
+      data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+
+    if (order === "dest") {
+      data.sort((a, b) =>
+        a.destinatario.localeCompare(b.destinatario)
+      );
+    }
+
     setItems(data);
   };
 
@@ -31,7 +53,7 @@ export default function App() {
 
   useEffect(() => {
     if (user) refresh();
-  }, [user]);
+  }, [user, filter, order]);
 
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "";
@@ -46,18 +68,10 @@ export default function App() {
         <h1>🎁 Lista de Desejos</h1>
 
         <div className="header-actions">
-          <button
-            className="icon-button"
-            onClick={() => setDarkMode(!darkMode)}
-            title="Alternar tema"
-          >
+          <button onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? "☀️" : "🌙"}
           </button>
-
-          <button
-            className="danger"
-            onClick={() => supabase.auth.signOut()}
-          >
+          <button className="danger" onClick={() => supabase.auth.signOut()}>
             Sair
           </button>
         </div>
@@ -65,54 +79,12 @@ export default function App() {
 
       <main>
         <AddItemForm refresh={refresh} />
-
-        {editing && (
-          <div className="card">
-            <h3>✏️ Editar item</h3>
-
-            <input
-              value={editing.item}
-              onChange={(e) =>
-                setEditing({ ...editing, item: e.target.value })
-              }
-            />
-
-            <input
-              value={editing.link || ""}
-              onChange={(e) =>
-                setEditing({ ...editing, link: e.target.value })
-              }
-            />
-
-            <textarea
-              value={editing.note || ""}
-              onChange={(e) =>
-                setEditing({ ...editing, note: e.target.value })
-              }
-            />
-
-            <div className="actions">
-              <button
-                onClick={async () => {
-                  await updateItem(editing.id, {
-                    item: editing.item,
-                    link: editing.link,
-                    note: editing.note,
-                  });
-                  setEditing(null);
-                  refresh();
-                }}
-              >
-                Salvar
-              </button>
-
-              <button className="secondary" onClick={() => setEditing(null)}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-
+        <Filters
+          filter={filter}
+          setFilter={setFilter}
+          order={order}
+          setOrder={setOrder}
+        />
         <ItemList
           items={items}
           user={user}

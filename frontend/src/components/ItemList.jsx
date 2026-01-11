@@ -1,58 +1,73 @@
-import { buyItem, deliverItem, deleteItem } from "../services/api";
+import { deleteItem, updateItem } from "../services/api";
 
 export default function ItemList({ items, user, refresh, onEdit }) {
-  return (
-    <div>
-      {items.map((i) => (
-        <div key={i.id} className="card">
-          <strong>{i.item}</strong>
-          <div>🎯 {i.owner}</div>
+  const currentUser = user.email;
 
-          {i.link && (
-            <a href={i.link} target="_blank" rel="noreferrer">
-              Link
+  return (
+    <>
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className={`card item ${
+            item.destinatario === "Nina"
+              ? "nina"
+              : item.destinatario === "Casa"
+              ? "casa"
+              : ""
+          }`}
+        >
+          <h3>{item.item}</h3>
+
+          <p><strong>Para:</strong> {item.destinatario}</p>
+          <p><strong>Adicionado por:</strong> {item.created_by}</p>
+
+          {item.note && <p>📝 {item.note}</p>}
+
+          {item.link && (
+            <a href={item.link} target="_blank" rel="noreferrer">
+              🔗 Link
             </a>
           )}
 
-          {i.note && <div>📝 {i.note}</div>}
-
-          {!i.bought_by && (
-            <button
-              onClick={async () => {
-                await buyItem(i.id, user.id);
-                refresh();
-              }}
-            >
-              Comprar
-            </button>
-          )}
-
-          {i.bought_by && !i.delivered && (
-            <button
-              onClick={async () => {
-                await deliverItem(i.id);
-                refresh();
-              }}
-            >
-              Entregue
-            </button>
-          )}
-
-          {i.created_by === user.id && (
-            <>
-              <button onClick={() => onEdit(i)}>Editar</button>
+          <div className="actions">
+            {!item.comprado && (
               <button
                 onClick={async () => {
-                  await deleteItem(i.id);
-                  refresh();
+                  if (window.confirm("Marcar como comprado?")) {
+                    await updateItem(item.id, { comprado: true });
+                    refresh();
+                  }
                 }}
               >
-                Remover
+                🛍️ Comprar
               </button>
-            </>
-          )}
+            )}
+
+            {item.created_by === currentUser && (
+              <>
+                <button
+                  className="secondary"
+                  onClick={() => onEdit(item)}
+                >
+                  ✏️ Editar
+                </button>
+
+                <button
+                  className="danger"
+                  onClick={async () => {
+                    if (window.confirm("Remover item?")) {
+                      await deleteItem(item.id);
+                      refresh();
+                    }
+                  }}
+                >
+                  🗑️ Remover
+                </button>
+              </>
+            )}
+          </div>
         </div>
       ))}
-    </div>
+    </>
   );
 }
