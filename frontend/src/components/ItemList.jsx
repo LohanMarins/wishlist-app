@@ -1,7 +1,7 @@
 import { deleteItem, updateItem } from "../services/api";
 
 export default function ItemList({ items, user, refresh, onEdit }) {
-  const currentUser = user.email;
+  const currentUserId = user.id; // ✅ UUID correto
 
   return (
     <>
@@ -18,8 +18,17 @@ export default function ItemList({ items, user, refresh, onEdit }) {
         >
           <h3>{item.item}</h3>
 
-          <p><strong>Para:</strong> {item.destinatario}</p>
-          <p><strong>Adicionado por:</strong> {item.created_by}</p>
+          <p>
+            <strong>Para:</strong>{" "}
+            {item.destinatario || "—"}
+          </p>
+
+          <p>
+            <strong>Adicionado por:</strong>{" "}
+            {item.created_by === currentUserId
+              ? "Você"
+              : "Outro usuário"}
+          </p>
 
           {item.note && <p>📝 {item.note}</p>}
 
@@ -43,7 +52,8 @@ export default function ItemList({ items, user, refresh, onEdit }) {
               </button>
             )}
 
-            {item.created_by === currentUser && (
+            {/* ✅ AGORA FUNCIONA */}
+            {item.created_by === currentUserId && (
               <>
                 <button
                   className="secondary"
