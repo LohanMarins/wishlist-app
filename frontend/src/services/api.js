@@ -1,17 +1,12 @@
 import { supabase } from "../supabase";
 
 export async function getItems() {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("items")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error(error);
-    return [];
-  }
-
-  return data;
+  return data || [];
 }
 
 export function addItem(item) {
