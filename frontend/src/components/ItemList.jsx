@@ -53,7 +53,6 @@ export default function ItemList({ items, user, refresh, onEdit }) {
               </button>
             )}
 
-            {/* ✅ Editar/Remover só para quem criou */}
             {item.created_by === currentUserId && (
               <>
                 <button className="secondary" onClick={() => onEdit(item)}>

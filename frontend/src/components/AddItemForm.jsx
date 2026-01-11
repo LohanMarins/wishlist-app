@@ -9,9 +9,13 @@ export default function AddItemForm({ refresh }) {
   const [note, setNote] = useState("");
 
   const submit = async () => {
-    if (!item) return;
+    if (!item || !owner) return;
 
-    const { data } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data?.user) {
+      alert("Usuário não autenticado");
+      return;
+    }
 
     await addItem({
       item,
@@ -24,12 +28,13 @@ export default function AddItemForm({ refresh }) {
     setItem("");
     setLink("");
     setNote("");
+    setOwner("lohan");
     refresh();
   };
 
   return (
     <div className="card">
-      <h3>Adicionar item</h3>
+      <h3>➕ Adicionar item</h3>
 
       <input
         placeholder="Item"
@@ -45,7 +50,7 @@ export default function AddItemForm({ refresh }) {
       </select>
 
       <input
-        placeholder="Link (opcional)"
+        placeholder="Link para compra (opcional)"
         value={link}
         onChange={(e) => setLink(e.target.value)}
       />

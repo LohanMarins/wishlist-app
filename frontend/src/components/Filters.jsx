@@ -1,19 +1,14 @@
-export default function Filters({
-  filter,
-  setFilter,
-  order,
-  setOrder,
-}) {
+export default function Filters({ filter, setFilter, order, setOrder }) {
   return (
     <div className="card">
       <h3>🔍 Filtros</h3>
 
       <select value={filter} onChange={(e) => setFilter(e.target.value)}>
         <option value="all">Todos</option>
-        <option value="Lohan">Lohan</option>
-        <option value="Letícia">Letícia</option>
-        <option value="Nina">Nina</option>
-        <option value="Casa">Casa</option>
+        <option value="lohan">Lohan</option>
+        <option value="leticia">Letícia</option>
+        <option value="nina">Nina</option>
+        <option value="casa">Casa</option>
       </select>
 
       <select value={order} onChange={(e) => setOrder(e.target.value)}>

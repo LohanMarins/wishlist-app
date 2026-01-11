@@ -20,8 +20,14 @@ export default function App() {
   const refresh = async () => {
     let data = await getItems();
 
+    // fallback para itens antigos
+    data = (data || []).map((i) => ({
+      ...i,
+      owner: i.owner || "lohan",
+    }));
+
     if (filter !== "all") {
-      data = data.filter((i) => i.destinatario === filter);
+      data = data.filter((i) => i.owner === filter);
     }
 
     if (order === "date_desc") {
@@ -33,9 +39,7 @@ export default function App() {
     }
 
     if (order === "dest") {
-      data.sort((a, b) =>
-        a.destinatario.localeCompare(b.destinatario)
-      );
+      data.sort((a, b) => (a.owner || "").localeCompare(b.owner || ""));
     }
 
     setItems(data);
@@ -79,12 +83,76 @@ export default function App() {
 
       <main>
         <AddItemForm refresh={refresh} />
+
         <Filters
           filter={filter}
           setFilter={setFilter}
           order={order}
           setOrder={setOrder}
         />
+
+        {editing && (
+          <div className="card">
+            <h3>✏️ Editar item</h3>
+
+            <input
+              value={editing.item}
+              onChange={(e) =>
+                setEditing({ ...editing, item: e.target.value })
+              }
+            />
+
+            <select
+              value={editing.owner}
+              onChange={(e) =>
+                setEditing({ ...editing, owner: e.target.value })
+              }
+            >
+              <option value="lohan">Lohan</option>
+              <option value="leticia">Letícia</option>
+              <option value="nina">Nina</option>
+              <option value="casa">Casa</option>
+            </select>
+
+            <input
+              placeholder="Link"
+              value={editing.link || ""}
+              onChange={(e) =>
+                setEditing({ ...editing, link: e.target.value })
+              }
+            />
+
+            <textarea
+              placeholder="Anotação"
+              value={editing.note || ""}
+              onChange={(e) =>
+                setEditing({ ...editing, note: e.target.value })
+              }
+            />
+
+            <div className="actions">
+              <button
+                onClick={async () => {
+                  await updateItem(editing.id, {
+                    item: editing.item,
+                    owner: editing.owner,
+                    link: editing.link,
+                    note: editing.note,
+                  });
+                  setEditing(null);
+                  refresh();
+                }}
+              >
+                Salvar
+              </button>
+
+              <button className="secondary" onClick={() => setEditing(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
         <ItemList
           items={items}
           user={user}
