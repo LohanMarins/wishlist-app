@@ -10,7 +10,6 @@
 
 # production
 /build
-backend/wishlist.db
 
 # misc
 .DS_Store
