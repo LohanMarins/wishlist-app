@@ -7,6 +7,14 @@ export default defineConfig({
     dedupe: ["react", "react-dom"]
   },
   optimizeDeps: {
-    include: ["react/jsx-runtime"]
+    include: ["react", "react-dom", "react/jsx-runtime"]
+  },
+  build: {
+    rollupOptions: {
+      external: []
+    },
+    commonjsOptions: {
+      include: [/node_modules/]
+    }
   }
 });
