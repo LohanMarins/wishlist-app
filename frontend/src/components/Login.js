@@ -1,28 +1,40 @@
 import { useState } from "react";
-import { login } from "../services/api";
+import { supabase } from "../supabase";
 
-export default function Login({ onLogin }) {
-  const [username, setUsername] = useState("");
+export default function Login() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
 
-  const submit = async (e) => {
-    e.preventDefault();
-    const res = await login(username, password);
+  const login = async () => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-    if (res.token) {
-      localStorage.setItem("token", res.token);
-      onLogin(res.token);
-    } else {
-      alert("Login inválido");
-    }
+    if (error) setError("Login inválido");
   };
 
   return (
-    <form onSubmit={submit}>
+    <div className="card">
       <h2>Login</h2>
-      <input placeholder="Usuário" onChange={e => setUsername(e.target.value)} />
-      <input type="password" placeholder="Senha" onChange={e => setPassword(e.target.value)} />
-      <button>Entrar</button>
-    </form>
+
+      <input
+        placeholder="Email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+      />
+
+      <input
+        type="password"
+        placeholder="Senha"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+      />
+
+      <button onClick={login}>Entrar</button>
+
+      {error && <p>{error}</p>}
+    </div>
   );
 }

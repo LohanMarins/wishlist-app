@@ -1,55 +1,48 @@
 import { useEffect, useState } from "react";
+import { supabase } from "./supabase";
 import Login from "./components/Login";
 import AddItemForm from "./components/AddItemForm";
 import ItemList from "./components/ItemList";
-import { getItems, deleteItem, updateItem } from "./services/api";
+import { getItems, updateItem } from "./services/api";
 import "./App.css";
 
 export default function App() {
-  // ---------- estados ----------
-  const [user, setUser] = useState(localStorage.getItem("token"));
+  const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
 
-  // ---------- funções ----------
   const refresh = async () => {
     const data = await getItems();
     setItems(data);
   };
 
-  // ---------- efeitos ----------
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setUser(data.session.user);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+  }, []);
+
   useEffect(() => {
     if (user) refresh();
   }, [user]);
 
-  // ---------- login ----------
-  if (!user) {
-    return <Login onLogin={setUser} />;
-  }
+  if (!user) return <Login />;
 
-  // ---------- UI ----------
   return (
     <div className="app">
       <div className="header">
         <h1>🎁 Lista de Desejos</h1>
-        <div>
-          <span style={{ marginRight: 10 }}>Logado como: <b>{user}</b></span>
-          <button
-            className="secondary"
-            onClick={() => {
-              localStorage.removeItem("token");
-              setUser(null);
-            }}
-          >
-            Sair
-          </button>
-        </div>
+        <button onClick={() => supabase.auth.signOut()}>
+          Sair
+        </button>
       </div>
 
-      {/* formulário */}
-      <AddItemForm user={user} refresh={refresh} />
+      <AddItemForm refresh={refresh} />
 
-      {/* editor */}
       {editing && (
         <div className="card">
           <h3>Editar item</h3>
@@ -75,44 +68,34 @@ export default function App() {
             }
           />
 
-          <div style={{ marginTop: 10 }}>
-            <button
-              onClick={async () => {
-                await updateItem(editing.id, {
-                  item: editing.item,
-                  link: editing.link,
-                  note: editing.note
-                });
-                setEditing(null);
-                refresh();
-              }}
-            >
-              Salvar
-            </button>
+          <button
+            onClick={async () => {
+              await updateItem(editing.id, {
+                item: editing.item,
+                link: editing.link,
+                note: editing.note
+              });
+              setEditing(null);
+              refresh();
+            }}
+          >
+            Salvar
+          </button>
 
-            <button
-              className="secondary"
-              style={{ marginLeft: 8 }}
-              onClick={() => setEditing(null)}
-            >
-              Cancelar
-            </button>
-          </div>
+          <button
+            className="secondary"
+            onClick={() => setEditing(null)}
+          >
+            Cancelar
+          </button>
         </div>
       )}
 
-      {/* lista */}
       <ItemList
         items={items}
         user={user}
         refresh={refresh}
         onEdit={setEditing}
-        onDelete={async (id) => {
-          if (window.confirm("Remover este item?")) {
-            await deleteItem(id);
-            refresh();
-          }
-        }}
       />
     </div>
   );

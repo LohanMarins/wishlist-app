@@ -1,66 +1,44 @@
-const API = "https://wishlist-backend-1x5u.onrender.com";
-
-function authHeader() {
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-export async function login(username, password) {
-  const res = await fetch(`${API}/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-  return res.json();
-}
+import { supabase } from "../supabase";
 
 export async function getItems() {
-  const res = await fetch(`${API}/items`, {
-    headers: authHeader(),
-  });
-  return res.json();
+  const { data, error } = await supabase
+    .from("items")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return data;
 }
 
-export async function addItem(item) {
-  const res = await fetch(`${API}/items`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader(),
-    },
-    body: JSON.stringify(item),
-  });
-  return res.json();
+export function addItem(item) {
+  return supabase.from("items").insert(item);
 }
 
-export async function buyItem(id) {
-  return fetch(`${API}/items/${id}/buy`, {
-    method: "POST",
-    headers: authHeader(),
-  });
+export function updateItem(id, updates) {
+  return supabase.from("items").update(updates).eq("id", id);
 }
 
-export async function deliverItem(id) {
-  return fetch(`${API}/items/${id}/deliver`, {
-    method: "POST",
-    headers: authHeader(),
-  });
+export function deleteItem(id) {
+  return supabase.from("items").delete().eq("id", id);
 }
 
-export async function updateItem(id, data) {
-  return fetch(`${API}/items/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader(),
-    },
-    body: JSON.stringify(data),
-  });
+export function buyItem(id, userId) {
+  return supabase
+    .from("items")
+    .update({
+      bought_by: userId,
+      bought_at: new Date().toISOString()
+    })
+    .eq("id", id);
 }
 
-export async function deleteItem(id) {
-  return fetch(`${API}/items/${id}`, {
-    method: "DELETE",
-    headers: authHeader(),
-  });
+export function deliverItem(id) {
+  return supabase
+    .from("items")
+    .update({ delivered: true })
+    .eq("id", id);
 }

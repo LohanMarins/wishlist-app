@@ -1,45 +1,48 @@
 import { useState } from "react";
+import { supabase } from "../supabase";
 import { addItem } from "../services/api";
 
-export default function AddItemForm({ user, refresh }) {
+export default function AddItemForm({ refresh }) {
   const [item, setItem] = useState("");
+  const [owner, setOwner] = useState("lohan");
   const [link, setLink] = useState("");
   const [note, setNote] = useState("");
-  const [owner, setOwner] = useState(user);
 
-  const allowedOwners =
-    user === "lohan"
-      ? ["lohan", "nina", "casa"]
-      : ["leticia", "nina", "casa"];
+  const submit = async () => {
+    if (!item) return;
 
-  const submit = async (e) => {
-    e.preventDefault();
+    const { data } = await supabase.auth.getUser();
 
     await addItem({
       item,
       owner,
-      category: owner,
-      link,
-      note
+      link: link || null,
+      note: note || null,
+      created_by: data.user.id
     });
 
     setItem("");
     setLink("");
     setNote("");
-    setOwner(user);
     refresh();
   };
 
   return (
-    <form onSubmit={submit}>
+    <div className="card">
       <h3>Adicionar item</h3>
 
       <input
         placeholder="Item"
         value={item}
         onChange={e => setItem(e.target.value)}
-        required
       />
+
+      <select value={owner} onChange={e => setOwner(e.target.value)}>
+        <option value="lohan">Lohan</option>
+        <option value="leticia">Letícia</option>
+        <option value="nina">Nina</option>
+        <option value="casa">Casa</option>
+      </select>
 
       <input
         placeholder="Link para compra (opcional)"
@@ -53,15 +56,7 @@ export default function AddItemForm({ user, refresh }) {
         onChange={e => setNote(e.target.value)}
       />
 
-      <select value={owner} onChange={e => setOwner(e.target.value)}>
-        {allowedOwners.map(o => (
-          <option key={o} value={o}>
-            {o.charAt(0).toUpperCase() + o.slice(1)}
-          </option>
-        ))}
-      </select>
-
-      <button>Adicionar</button>
-    </form>
+      <button onClick={submit}>Adicionar</button>
+    </div>
   );
 }
