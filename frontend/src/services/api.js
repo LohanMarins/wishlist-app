@@ -1,21 +1,26 @@
 import { supabase } from "../supabase";
 
 export async function getItems() {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("items")
-    .select("*");
+    .select("*")
+    .order("created_at", { ascending: false });
 
+  if (error) throw error;
   return data || [];
 }
 
 export async function addItem(item) {
-  await supabase.from("items").insert([item]);
+  const { error } = await supabase.from("items").insert([item]);
+  if (error) throw error;
 }
 
 export async function updateItem(id, updates) {
-  await supabase.from("items").update(updates).eq("id", id);
+  const { error } = await supabase.from("items").update(updates).eq("id", id);
+  if (error) throw error;
 }
 
 export async function deleteItem(id) {
-  await supabase.from("items").delete().eq("id", id);
+  const { error } = await supabase.from("items").delete().eq("id", id);
+  if (error) throw error;
 }

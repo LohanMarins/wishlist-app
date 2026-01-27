@@ -24,6 +24,7 @@ export default function App() {
     data = (data || []).map((i) => ({
       ...i,
       owner: i.owner || "lohan",
+      comprado: i.comprado === true,
     }));
 
     if (filter !== "all") {

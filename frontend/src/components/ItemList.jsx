@@ -43,9 +43,14 @@ export default function ItemList({ items, user, refresh, onEdit }) {
             {!item.comprado && (
               <button
                 onClick={async () => {
-                  if (window.confirm("Marcar como comprado?")) {
+                  if (!window.confirm("Marcar como comprado?")) return;
+
+                  try {
                     await updateItem(item.id, { comprado: true });
-                    refresh();
+                    await refresh(); // ✅ garante atualização
+                  } catch (e) {
+                    console.error(e);
+                    alert("Não foi possível marcar como comprado (ver console).");
                   }
                 }}
               >
