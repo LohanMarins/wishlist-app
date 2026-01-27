@@ -46,7 +46,13 @@ export default function ItemList({ items, user, refresh, onEdit }) {
                   if (!window.confirm("Marcar como comprado?")) return;
 
                   try {
-                    await updateItem(item.id, { comprado: true });
+                    await updateItem(item.id, {
+                      comprado: true,
+                      bought_by: user.id,
+                      bought_at: new Date().toISOString(),
+                      delivered: false,
+                      delivered_at: null,
+                    });
                     await refresh(); // ✅ garante atualização
                   } catch (e) {
                     console.error(e);
@@ -55,6 +61,22 @@ export default function ItemList({ items, user, refresh, onEdit }) {
                 }}
               >
                 🛍️ Comprar
+              </button>
+            )}
+
+            {item.comprado && !item.delivered && item.bought_by === user.id && (
+              <button
+                className="secondary"
+                onClick={async () => {
+                  if (!window.confirm("Marcar como entregue?")) return;
+                  await updateItem(item.id, {
+                    delivered: true,
+                    delivered_at: new Date().toISOString(),
+                  });
+                  refresh();
+                }}
+              >
+                ✅ Entregue
               </button>
             )}
 
