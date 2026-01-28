@@ -1,14 +1,20 @@
 import { deleteItem, updateItem } from "../services/api";
 
-export default function ItemList({ items, user, refresh, onEdit }) {
+export default function ItemList({ items, user, refresh, onEdit, currentOwner }) {
   const currentUserId = user.id;
 
-  const labelOwner = (owner) => {
-    if (owner === "lohan") return "Lohan";
-    if (owner === "leticia") return "Letícia";
-    if (owner === "nina") return "Nina";
-    if (owner === "casa") return "Casa";
-    return owner || "—";
+  const labelOwner = (o) => {
+    if (o === "lohan") return "Lohan";
+    if (o === "leticia") return "Letícia";
+    if (o === "nina") return "Nina";
+    if (o === "casa") return "Casa";
+    return o || "—";
+  };
+
+  const statusText = (item) => {
+    if (item.delivered) return "✅ Entregue";
+    if (item.comprado) return "🛍️ Comprado";
+    return "📝 Disponível";
   };
 
   return (
@@ -20,7 +26,12 @@ export default function ItemList({ items, user, refresh, onEdit }) {
             item.owner === "nina" ? "nina" : item.owner === "casa" ? "casa" : ""
           }`}
         >
-          <h3>{item.item}</h3>
+          <div className="row">
+            <h3 style={{ margin: 0 }}>{item.item}</h3>
+            <span className={`badge ${item.delivered ? "ok" : item.comprado ? "warn" : ""}`}>
+              {statusText(item)}
+            </span>
+          </div>
 
           <p>
             <strong>Para:</strong> {labelOwner(item.owner)}
@@ -40,20 +51,27 @@ export default function ItemList({ items, user, refresh, onEdit }) {
           )}
 
           <div className="actions">
+            {/* Comprar */}
             {!item.comprado && (
               <button
                 onClick={async () => {
                   if (!window.confirm("Marcar como comprado?")) return;
 
+                  const now = new Date().toISOString();
+                  const isSelfGift = currentOwner && item.owner === currentOwner;
+
                   try {
                     await updateItem(item.id, {
                       comprado: true,
-                      bought_by: user.id,
-                      bought_at: new Date().toISOString(),
-                      delivered: false,
-                      delivered_at: null,
+                      bought_by: currentUserId,
+                      bought_at: now,
+
+                      // se comprou algo "para si mesmo", marca entregue automaticamente
+                      delivered: isSelfGift ? true : false,
+                      delivered_at: isSelfGift ? now : null,
                     });
-                    await refresh(); // ✅ garante atualização
+
+                    await refresh();
                   } catch (e) {
                     console.error(e);
                     alert("Não foi possível marcar como comprado (ver console).");
@@ -64,22 +82,30 @@ export default function ItemList({ items, user, refresh, onEdit }) {
               </button>
             )}
 
-            {item.comprado && !item.delivered && item.bought_by === user.id && (
+            {/* Entregue (só quem comprou vê) */}
+            {item.comprado && !item.delivered && item.bought_by === currentUserId && (
               <button
                 className="secondary"
                 onClick={async () => {
                   if (!window.confirm("Marcar como entregue?")) return;
-                  await updateItem(item.id, {
-                    delivered: true,
-                    delivered_at: new Date().toISOString(),
-                  });
-                  refresh();
+
+                  try {
+                    await updateItem(item.id, {
+                      delivered: true,
+                      delivered_at: new Date().toISOString(),
+                    });
+                    await refresh();
+                  } catch (e) {
+                    console.error(e);
+                    alert("Não foi possível marcar como entregue (ver console).");
+                  }
                 }}
               >
                 ✅ Entregue
               </button>
             )}
 
+            {/* Editar / Remover (só quem criou) */}
             {item.created_by === currentUserId && (
               <>
                 <button className="secondary" onClick={() => onEdit(item)}>
@@ -89,9 +115,13 @@ export default function ItemList({ items, user, refresh, onEdit }) {
                 <button
                   className="danger"
                   onClick={async () => {
-                    if (window.confirm("Remover item?")) {
+                    if (!window.confirm("Remover item?")) return;
+                    try {
                       await deleteItem(item.id);
-                      refresh();
+                      await refresh();
+                    } catch (e) {
+                      console.error(e);
+                      alert("Não foi possível remover (ver console).");
                     }
                   }}
                 >

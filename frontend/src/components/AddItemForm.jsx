@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "../supabase";
 import { addItem } from "../services/api";
 
-export default function AddItemForm({ refresh }) {
+export default function AddItemForm({ refresh, currentOwner }) {
   const [item, setItem] = useState("");
-  const [owner, setOwner] = useState("lohan");
+  const [owner, setOwner] = useState(currentOwner || "lohan");
   const [link, setLink] = useState("");
   const [note, setNote] = useState("");
+
+  const allowedOwners = useMemo(() => {
+    // Se não identificarmos o usuário, liberamos tudo (fallback)
+    if (!currentOwner) return ["lohan", "leticia", "nina", "casa"];
+    return [currentOwner, "nina", "casa"];
+  }, [currentOwner]);
 
   const submit = async () => {
     if (!item || !owner) return;
@@ -17,18 +23,30 @@ export default function AddItemForm({ refresh }) {
       return;
     }
 
+    // garante que não dá pra inserir para outro humano
+    if (currentOwner && !allowedOwners.includes(owner)) {
+      alert("Você só pode adicionar itens para você, Nina ou Casa.");
+      return;
+    }
+
     await addItem({
       item,
       owner,
       link: link || null,
       note: note || null,
       created_by: data.user.id,
+      // defaults garantidos no banco, mas ok
+      comprado: false,
+      delivered: false,
+      bought_by: null,
+      bought_at: null,
+      delivered_at: null,
     });
 
     setItem("");
     setLink("");
     setNote("");
-    setOwner("lohan");
+    setOwner(currentOwner || "lohan");
     refresh();
   };
 
@@ -43,10 +61,10 @@ export default function AddItemForm({ refresh }) {
       />
 
       <select value={owner} onChange={(e) => setOwner(e.target.value)}>
-        <option value="lohan">Lohan</option>
-        <option value="leticia">Letícia</option>
-        <option value="nina">Nina</option>
-        <option value="casa">Casa</option>
+        {allowedOwners.includes("lohan") && <option value="lohan">Lohan</option>}
+        {allowedOwners.includes("leticia") && <option value="leticia">Letícia</option>}
+        {allowedOwners.includes("nina") && <option value="nina">Nina</option>}
+        {allowedOwners.includes("casa") && <option value="casa">Casa</option>}
       </select>
 
       <input

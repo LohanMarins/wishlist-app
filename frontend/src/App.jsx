@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
 import Login from "./components/Login";
 import AddItemForm from "./components/AddItemForm";
@@ -6,6 +6,18 @@ import ItemList from "./components/ItemList";
 import Filters from "./components/Filters";
 import { getItems, updateItem } from "./services/api";
 import "./App.css";
+
+/**
+ * ✅ PREENCHA AQUI:
+ * email -> owner
+ * Ex:
+ * "lohan@email.com" => "lohan"
+ * "leticia@email.com" => "leticia"
+ */
+const USER_OWNER_MAP = {
+  "lohan.lam91@gmail.com": "lohan",
+  "leticiamaramattos@gmail.com": "leticia",
+};
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -17,28 +29,68 @@ export default function App() {
     localStorage.getItem("theme") === "dark"
   );
 
+  const currentOwner = useMemo(() => {
+    const email = (user?.email || "").toLowerCase().trim();
+    return USER_OWNER_MAP[email] || null;
+  }, [user]);
+
   const refresh = async () => {
     let data = await getItems();
 
-    // fallback para itens antigos
+    // normalização + fallback pra itens antigos
     data = (data || []).map((i) => ({
       ...i,
       owner: i.owner || "lohan",
       comprado: i.comprado === true,
+      delivered: i.delivered === true,
     }));
 
+    // ==========================
+    // ✅ ANTI-SPOILER
+    // ==========================
+    if (currentOwner) {
+      const activePurchases = data.filter(
+        (i) =>
+          i.owner === currentOwner &&
+          i.comprado &&
+          !i.delivered &&
+          i.bought_at
+      );
+
+      if (activePurchases.length > 0) {
+        // pega o "cutoff" mais recente
+        const cutoff = activePurchases
+          .map((i) => new Date(i.bought_at).getTime())
+          .reduce((a, b) => Math.max(a, b), 0);
+
+        data = data.filter((i) => {
+          if (i.owner !== currentOwner) return true;
+
+          // sempre esconde itens comprados e não entregues
+          if (i.comprado && !i.delivered) return false;
+
+          // esconde itens criados antes (ou no momento) da compra mais recente não entregue
+          const created = i.created_at ? new Date(i.created_at).getTime() : 0;
+          if (created && created <= cutoff) return false;
+
+          // itens novos (depois do cutoff) continuam visíveis para o dono
+          return true;
+        });
+      }
+    }
+
+    // filtros (após anti-spoiler)
     if (filter !== "all") {
       data = data.filter((i) => i.owner === filter);
     }
 
+    // ordenação
     if (order === "date_desc") {
       data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
-
     if (order === "date_asc") {
       data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     }
-
     if (order === "dest") {
       data.sort((a, b) => (a.owner || "").localeCompare(b.owner || ""));
     }
@@ -58,7 +110,7 @@ export default function App() {
 
   useEffect(() => {
     if (user) refresh();
-  }, [user, filter, order]);
+  }, [user, filter, order, currentOwner]);
 
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "";
@@ -83,7 +135,7 @@ export default function App() {
       </header>
 
       <main>
-        <AddItemForm refresh={refresh} />
+        <AddItemForm refresh={refresh} currentOwner={currentOwner} />
 
         <Filters
           filter={filter}
@@ -104,7 +156,7 @@ export default function App() {
             />
 
             <select
-              value={editing.owner}
+              value={editing.owner || "lohan"}
               onChange={(e) =>
                 setEditing({ ...editing, owner: e.target.value })
               }
@@ -134,14 +186,19 @@ export default function App() {
             <div className="actions">
               <button
                 onClick={async () => {
-                  await updateItem(editing.id, {
-                    item: editing.item,
-                    owner: editing.owner,
-                    link: editing.link,
-                    note: editing.note,
-                  });
-                  setEditing(null);
-                  refresh();
+                  try {
+                    await updateItem(editing.id, {
+                      item: editing.item,
+                      owner: editing.owner,
+                      link: editing.link,
+                      note: editing.note,
+                    });
+                    setEditing(null);
+                    await refresh();
+                  } catch (e) {
+                    console.error(e);
+                    alert("Não foi possível salvar (ver console).");
+                  }
                 }}
               >
                 Salvar
@@ -159,6 +216,7 @@ export default function App() {
           user={user}
           refresh={refresh}
           onEdit={setEditing}
+          currentOwner={currentOwner}
         />
       </main>
     </div>
